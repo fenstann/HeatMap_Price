@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css"/>
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"/>
+
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <style>
+        body {
+            background-image: url(bg.jpg); 
+            background-color: #443383;
+            background-size: 1750px;
+        }
+
+        .center {
+            margin-top: 20%; 
+        }
+    </style>
+</head>
+<body>
+<div class="container center" id="cont">
+
+
+    <div class="col-md-6 m-auto " id="blockSearch">
+        <h3 class="text-center mb-3 font-weight-bold">
+            Поиск по тепловой карте
+        </h3>
+
+        <div class="form-group">
+            <input id="search" type="text" class="form-control" placeholder="Введите город"/>
+        </div>
+        <div id="match-list">
+        </div>
+    </div>
+
+
+</div>
+
+
+<script"> const search = document.getElementById('search');
+const matchList = document.getElementById('match-list');
+const blockSearch = document.getElementById('blockSearch');
+
+//Поиск
+const searchCity = async searchText => {
+    const res = await fetch('http://127.0.0.1:8000/api/v1/map/getcities/')
+    const cities = await res.json()
+
+    //Получаем текуущий текст
+    let matches = cities.filter(city => {
+        const regex = new RegExp(`^${searchText}`, 'gi');
+        return city.name.match(regex);
+    });
+
+
+    outputHtml(matches, searchText);
+};
+
+
+//Добавляем в html
+const outputHtml = (matches, searchText) => {
+
+
+    if (matches.length > 0) {
+        let html = matches.map(match => `
+        <a href="./test.html?city=${match.url}">
+        <div id="resultSearch" class="card text-white card-body bg-primary  mb-1">
+            <h5 class="text-white mb-1">${match.name}</h5>
+           
+        </div>
+        </a>
+        `).join('');
+        matchList.innerHTML = html;
+
+    } else {
+        const html = ` <div class="card text-white card-body bg-primary  mb-1">
+            <h5 class="text-white mb-1">Такого города нет в базе</h5>
+           
+        </div>`
+        matchList.innerHTML = html;
+    }
+
+    if (searchText.length === 0) {
+        matchList.innerHTML = '';
+    }
+
+    //Делаем клик по блоку города
+    if (document.getElementById('resultSearch')) {
+        const resultSearch = document.getElementById('resultSearch');
+        resultSearch.addEventListener('click', createMap);
+    }
+
+};
+
+const createMap = () => {
+}
+
+
+
+search.addEventListener('input', () => searchCity(search.value));
+</script>
+
+</body>
+</html>

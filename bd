@@ -1,0 +1,139 @@
+CREATE TABLE "public"."parsing_buildings" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_buildings_id_seq'::regclass),
+  "totalFloor" int4 NOT NULL,
+  "lat" numeric(9,5) NOT NULL,
+  "lng" numeric(9,5) NOT NULL,
+  "typeOfHouse_id" int4 NOT NULL,
+  CONSTRAINT "parsing_buildings_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "parsing_buildings_typeOfHouse_id_5100ad9c_fk_parsing_t" FOREIGN KEY ("typeOfHouse_id") REFERENCES "public"."parsing_typehouse" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED
+)
+;
+ALTER TABLE "public"."parsing_buildings" 
+  OWNER TO "postgres";
+
+CREATE INDEX "parsing_buildings_typeOfHouse_id_5100ad9c" ON "public"."parsing_buildings" USING btree (
+  "typeOfHouse_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+---------
+CREATE TABLE "public"."parsing_city" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_city_id_seq'::regclass),
+  "name" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
+  "url" varchar(250) COLLATE "pg_catalog"."default" NOT NULL,
+  CONSTRAINT "parsing_city_pkey" PRIMARY KEY ("id")
+)
+;
+
+ALTER TABLE "public"."parsing_city" 
+  OWNER TO "postgres";
+
+----
+CREATE TABLE "public"."parsing_novostroyselllist" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_novostroyselllist_id_seq'::regclass),
+  "idOtdelka_id" int4 NOT NULL,
+  "idSrok_id" int4 NOT NULL,
+  "parametr_id" int8 NOT NULL,
+  CONSTRAINT "parsing_novostroyselllist_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT
+"parsing_novostroysel_idOtdelka_id_81c70888_fk_parsing_o" FOREIGN KEY ("idOtdelka_id") REFERENCES "public"."parsing_otdelka" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT "parsing_novostroysel_idSrok_id_6bed97d0_fk_parsing_s" FOREIGN KEY ("idSrok_id") REFERENCES "public"."parsing_sroksdachi" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT "parsing_novostroysel_parametr_id_3a131a36_fk_parsing_s" FOREIGN KEY ("parametr_id") REFERENCES "public"."parsing_selllist" ("idAvito") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED
+)
+;
+
+ALTER TABLE "public"."parsing_novostroyselllist" 
+  OWNER TO "postgres";
+CREATE INDEX "parsing_novostroyselllist_idOtdelka_id_81c70888" ON "public"."parsing_novostroyselllist" USING btree (
+  "idOtdelka_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "parsing_novostroyselllist_idSrok_id_6bed97d0" ON "public"."parsing_novostroyselllist" USING btree (
+  "idSrok_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "parsing_novostroyselllist_parametr_id_3a131a36" ON "public"."parsing_novostroyselllist" USING btree (
+  "parametr_id" "pg_catalog"."int8_ops" ASC NULLS LAST
+);
+--
+CREATE TABLE "public"."parsing_otdelka" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_otdelka_id_seq'::regclass),
+  "otdelka" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
+  CONSTRAINT "parsing_otdelka_pkey" PRIMARY KEY ("id")
+)
+;
+ALTER TABLE "public"."parsing_otdelka" 
+  OWNER TO "postgres";
+--
+CREATE TABLE "public"."parsing_rooms" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_rooms_id_seq'::regclass),
+  "room" int4 NOT NULL,
+  CONSTRAINT "parsing_rooms_pkey" PRIMARY KEY ("id")
+)
+;
+
+ALTER TABLE "public"."parsing_rooms" 
+  OWNER TO "postgres";
+--
+CREATE TABLE "public"."parsing_selllist" (
+  "idAvito" int8 NOT NULL,
+  "fullPriceRub" int4 NOT NULL,
+  "fullPriceDollars" int4 NOT NULL,
+  "priceForMetres" int4 NOT NULL,
+  "agent" bool NOT NULL,
+  "floor" int4 NOT NULL,
+  "area" float8 NOT NULL,
+  "areaKitchen" float8,
+  "areaLive" float8,
+  "description" text COLLATE "pg_catalog"."default" NOT NULL,
+  "dateAdd" date NOT NULL,
+  "building_id" int4 NOT NULL,
+  "cityName_id" int4 NOT NULL,
+  "room_id" int4 NOT NULL,
+  "novostroy" bool NOT NULL,
+  CONSTRAINT "parsing_selllist_pkey" PRIMARY KEY ("idAvito"),
+  CONSTRAINT "parsing_selllist_building_id_4bceff9c_fk_parsing_buildings_id" FOREIGN KEY ("building_id") REFERENCES "public"."parsing_buildings" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT "parsing_selllist_cityName_id_16334d8e_fk_parsing_city_id" FOREIGN KEY ("cityName_id") REFERENCES "public"."parsing_city" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT "parsing_selllist_room_id_292a7f39_fk_parsing_rooms_id" FOREIGN KEY ("room_id") REFERENCES "public"."parsing_rooms" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION DEFERRABLE INITIALLY DEFERRED
+)
+;
+
+ALTER TABLE "public"."parsing_selllist" 
+  OWNER TO "postgres";
+CREATE INDEX "parsing_selllist_area_f18d4eb5" ON "public"."parsing_selllist" USING btree (
+  "area" "pg_catalog"."float8_ops" ASC NULLS LAST
+);
+CREATE INDEX "parsing_selllist_building_id_4bceff9c" ON "public"."parsing_selllist" USING btree (
+  "building_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "parsing_selllist_cityName_id_16334d8e" ON "public"."parsing_selllist" USING btree (
+  "cityName_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "parsing_selllist_fullPriceRub_e625ec80" ON "public"."parsing_selllist" USING btree (
+  "fullPriceRub" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+
+CREATE INDEX "parsing_selllist_room_id_292a7f39" ON "public"."parsing_selllist" USING btree (
+  "room_id" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
+--
+CREATE TABLE "public"."parsing_sroksdachi" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_sroksdachi_id_seq'::regclass),
+  "srok" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
+  CONSTRAINT "parsing_sroksdachi_pkey" PRIMARY KEY ("id")
+)
+;
+ALTER TABLE "public"."parsing_sroksdachi" 
+  OWNER TO "postgres";
+--
+CREATE TABLE "public"."parsing_typehouse" (
+  "id" int4 NOT NULL DEFAULT nextval('parsing_typehouse_id_seq'::regclass),
+  "type" varchar(50) COLLATE "pg_catalog"."default" NOT NULL,
+  CONSTRAINT "parsing_typehouse_pkey" PRIMARY KEY ("id")
+)
+;
+
+ALTER TABLE "public"."parsing_typehouse" 
+  OWNER TO "postgres";
+--]

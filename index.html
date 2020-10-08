@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"/>
+
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <title>Document</title>
+</head>
+<body>
+<!--https://i.imgur.com/EA2L2NT.png-->
+<!--https://i.imgur.com/rOizlQN.png-->
+<div class="container">
+    <div class="row jumbotron">
+
+        <div class="col-md-10">
+
+
+                    <h1 class="text-center font-weight-light">
+                        Поиск по тепловой карте
+
+                    </h1>
+
+
+
+                <div id="map"></div>
+
+            </div>
+            <div class="col-md-2 mt-5">
+                <div class="card bg-light mb-3" style="max-width: 10rem;">
+                    <div class="card-header">Карта цен</div>
+                    <div class="card-body">
+
+                        <div class="d-flex flex-column mb-3" id="colorprice"
+                             style="text-align: center;font-weight: bold;color: #fff;">
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="studio" checked="">
+                            <label class="custom-control-label" for="studio">Студии</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="1kom" checked="">
+                            <label class="custom-control-label" for="1kom">1-комн</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="2kom" checked="">
+                            <label class="custom-control-label" for="2kom">2-комн</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="3kom" checked="">
+                            <label class="custom-control-label" for="3kom">3-комн</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="4kom" checked="">
+                            <label class="custom-control-label" for="4kom">4-комн</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="5kom" checked="">
+                            <label class="custom-control-label" for="5kom">5-комн</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="7kom" checked="">
+                            <label class="custom-control-label" for="7kom">5+комнат</label>
+                        </div>
+                        <p class="card-text">Введите радиус поиска квартир в метрах</p>
+
+                    </div>
+
+                    <div class="form-row">
+                        <input type="text" class="form-control sx-2" placeholder="Радиус" id="validationRadius"
+                               required>
+                        <button type="submit" class="btn btn-primary btn-block" id="btnRadius">Сохранить</button>
+                        <div id="formRadius"></div>
+                    </div>
+
+                </div>
+
+            </div>
+                    <h5 class="ml-3 font-weight-light">Новый поиск</h5>
+        </div>
+
+    </div>
+
+    <div class="test" id="test"></div>
+    <script type="text/javascript"> //Получаем парамерты из урла
+var params = new URLSearchParams(document.location.search).get('city')
+//let imgOverlay = `${params}.png`
+
+
+
+///Рисуем цвета цвен
+const colorPrice = document.getElementById('colorprice')
+let grades = getPrice();
+for (var i = 0; i < grades.length; i++) {
+    colorPrice.innerHTML += '<i style="background:' + rgbToHex(getColor()[i]) + '">' + grades[i] + ' 000</i> '
+        + (grades[i + 1] ? '' : '');
+    ;
+}
+///
+
+
+//Аналог linspace
+function makeArr(startValue, stopValue, cardinality) {
+    var arr = [];
+    var step = Math.ceil((stopValue - startValue) / (cardinality - 1));
+    for (var i = 0; i < cardinality; i++) {
+        arr.push(startValue + (step * i));
+    }
+    return arr;
+}
+
+
+///
+
+
+//Задаем радиус поиска
+const forms = document.getElementById('formRadius');
+const inputRadius = document.getElementById('validationRadius');
+const btnRadius = document.getElementById('btnRadius');
+const setRadius = radius => {
+    console.log(radius);
+    if (radius === '') {
+        forms.innerHTML = '<div class="iinvalid-feedback alert-success">\n' +
+            '                            Пусто' +
+            '                    </div>`'
+    }
+
+    if (typeof radius != "number") {
+        forms.innerHTML = ` <div class="iinvalid-feedback alert-danger">
+                            Введите пожалуйста цифры
+                    </div>`
+    }
+
+    if (radius < 50) {
+        forms.innerHTML = ` <div class="iinvalid-feedback alert-danger">
+                            Радиус должен быть больше 50!
+                    </div>`
+    }
+    if (radius > 1000) {
+        forms.innerHTML = ` <div class="iinvalid-feedback alert-danger">
+                            Радиус должен быть меньше 1км!
+                    </div>`
+    }
+
+    if (radius > 49 && radius <= 1000) {
+        forms.innerHTML = ` <div class="iinvalid-feedback alert-success radiusok" id="${radius}">
+                            Число было сохраненно
+                    </div>`
+    }
+
+
+};
+btnRadius.addEventListener('click', () => setRadius(inputRadius.value));
+////
+
+
+///Первичная настройка карты
+var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+    osm = L.tileLayer(osmUrl, {maxZoom: 18, minZoom: 11});
+latlng = new L.LatLng(mapCenterLat, mapCenterLng);
+var map = new L.Map('map', {
+    preferCanvas: true,
+});
+
+map.addLayer(osm);
+
+var bounds = new L.LatLngBounds(
+    new L.LatLng(nizleftLat, nizleftLng),
+    new L.LatLng(verhpravLat, verhpravLng));
+map.fitBounds(bounds);
+
+var overlay = new L.ImageOverlay(imgOverlay, bounds, {
+    opacity: 0.7,
+    interactive: false,
+});
+
+document.getElementsByClassName("leaflet-control-attribution leaflet-control")[0].remove()
+map.addLayer(overlay);
+
+
+function getPrice() {
+    const price = makeArr(maxprice, minprice, 15)
+    return price
+}
+
+function getColor() {
+    let color = [[228, 228, 228],
+        [85, 78, 177],
+        [67, 105, 196],
+        [64, 160, 180],
+        [78, 194, 98],
+        [108, 209, 80],
+        [190, 228, 61],
+        [235, 224, 53],
+        [234, 185, 57],
+        [233, 143, 67],
+        [225, 94, 93],
+        [147, 23, 78],
+        [114, 22, 56],
+        [84, 16, 41],
+        [43, 0, 1]
+    ];
+    return color.reverse()
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(color) {
+    return "#" + componentToHex(color[0]) + componentToHex(color[1]) + componentToHex(color[2]);
+}
+
+
+function createHTMLTable(data, price, range) {
+
+    const reducer = (accumulator, currentValue) => accumulator + currentValue;
+
+    ///Чекбоксы
+    const studio = document.getElementById('studio');
+    const kom1 = document.getElementById('1kom');
+    const kom2 = document.getElementById('2kom');
+    const kom3 = document.getElementById('3kom');
+    const kom4 = document.getElementById('4kom');
+    const kom5 = document.getElementById('5kom');
+    const kom7 = document.getElementById('7kom');
+    const checkRoom = [false,kom1.checked, kom2.checked, kom3.checked,kom4.checked,kom5.checked, studio.checked,kom7.checked]
+    console.log(checkRoom)
+
+    let tableBody = checkRoom.reduce(reducer)>0?`
+        <table class="table">
+            <tbody>
+            <thead class="table-dark">
+            <tr class="d-flex"> 
+                <th class="table-condensed col-sm-3">Ид на Авито</th>
+                <th class="table-condensed col-sm-2" >Цена за метр</th>
+                <th class="table-condensed col-sm-3" >Количество комнат</th>
+                <th class="table-condensed col-sm-2">Агент ли?</th>
+            </tr>
+            </thead>`: `<br><h5 class="text-white text-center"  >Ничего не найдено по вашим параметрам</h5>`
+
+    let buildingsCoord = []
+    let meanprice = 0
+    let countPrice = 0
+    let priceNroom = [[], [], [], [], [], [], [], []]
+
+    console.log(data);
+    data.forEach((item, i, arr) => {
+        buildingsCoord.push([+item.lat, +item.lng]);
+        item.buildings.forEach((it, ii, item) => {
+            meanprice += it.priceForMetres
+            if (it.room.room == 1) {
+                priceNroom[1].push(it.priceForMetres)
+            }
+            if (it.room.room == 2) {
+                priceNroom[2].push(it.priceForMetres)
+            }
+            if (it.room.room == 3) {
+                priceNroom[3].push(it.priceForMetres)
+            }
+            if (it.room.room == 4) {
+                priceNroom[4].push(it.priceForMetres)
+            }
+            if (it.room.room == 5) {
+                priceNroom[5].push(it.priceForMetres)
+            }
+            if (it.room.room == 6) {
+                priceNroom[6].push(it.priceForMetres)
+            }
+            if (it.room.room == 7) {
+                priceNroom[7].push(it.priceForMetres)
+            }
+
+            countPrice += 1
+
+            checkRoom.forEach((room, i, arr) => {
+                if (room & it.room.room==i){
+                tableBody += `<tr bgcolor="#fff" class="d-flex">
+                             <td  class="col-sm-3"><a href="https://www.avito.ru/${it.idAvito}" target="_blank">${it.idAvito}</a></td>
+                              <td class="col-sm-2"><strong>${it.priceForMetres}Р</strong></td>
+                              <td class="col-sm-3">${it.room.room}-комн</td>
+                              <td class="col-sm-2">${it.agent? `Да`:`Нет`}</td>
+                            </tr>`
+                    }
+            });
+        });
+
+    });
+
+
+    let meanNprice = [[], [], [], [], [], [], [], []]
+    priceNroom.forEach((item, i, arr) => {
+        if (priceNroom[i].length >= 5) {
+            meanNprice[i].push((priceNroom[i].reduce(reducer) / priceNroom[i].length).toFixed())
+        } else {
+            meanNprice[i].push("Мало данных")
+        }
+    });
+    console.log(meanNprice)
+    const tableHeader = `        <div class="card-header bg-primary tablemarg" id="bodyheader">
+<h5 class="text-white text-center">Среднеяя цена: <br><strong> ${Math.ceil(meanprice / countPrice)} рублей</strong></h5>
+<p class="text-white text-center mb-0">Количество объявлений <strong>${countPrice}</strong> в радиусе ${range}м</p>
+<p class="text-white text-center mb-0">Среднея цена для <br>
+<strong>Студия: ${priceNroom[6].length > 5 ?`${meanNprice[6]} руб | количество - ${priceNroom[6].length}` : 'Мало данных'}</strong> 
+<br><strong>1-комнатные: ${priceNroom[1].length > 5 ?` ${meanNprice[1]} руб | количество - ${priceNroom[1].length}` : 'Мало данных'}</strong> 
+<br><strong>2-комнатные: ${priceNroom[2].length > 5 ?` ${meanNprice[2]} руб | количество - ${priceNroom[2].length}` : 'Мало данных'}</strong> 
+<br><strong>3-комнатные: ${priceNroom[3].length > 5 ?` ${meanNprice[3]} руб | количество - ${priceNroom[3].length}` : 'Мало данных'}</strong> 
+<br><strong>4-комнатные: ${priceNroom[4].length > 5 ?` ${meanNprice[4]} руб | количество - ${priceNroom[4].length}` : 'Мало данных'}</strong> 
+<br><strong>5-комнатные: ${priceNroom[5].length > 5 ?` ${meanNprice[5]} руб | количество - ${priceNroom[5].length}` : 'Мало данных'}</strong> 
+<br><strong>Больше 5 комнат: ${priceNroom[7].length > 5 ?` ${meanNprice[7]} руб | количество - ${priceNroom[7].length}` : 'Мало данных'}</strong>
+</p>
+<div class="tablemarg">
+
+`
+
+
+    return [tableHeader + tableBody + `</tbody></table> </div>`, buildingsCoord];
+}
+
+function createHTMLTableError(data) {
+    let tableError = `<div class="alert alert-dismissible alert-danger d-flex mb-0" role="alert">
+  <strong class="ml-5">Ошибка <br></strong>${data.Error}</div>`
+
+    return [tableError, 0];
+}
+
+
+async function getPriceFromRange(lat = 0, lng = 0, range = 300, price) {
+
+    try {
+        const dataBuildings = await axios.get('http://127.0.0.1:8000/api/v1/map/distance/',
+            {
+                params: {
+                    radius: range,
+                    lat: lat,
+                    lng: lng,
+                }
+            });
+
+
+        let [htmlBuildings, buildingDots] = dataBuildings.data.hasOwnProperty('Error') ? createHTMLTableError(dataBuildings.data) : createHTMLTable(dataBuildings.data, price, range);
+
+        return [htmlBuildings, buildingDots]
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+var circle;
+map.on('click', async function (e) {
+    const getRadiusClass = document.getElementsByClassName('iinvalid-feedback alert-success radiusok')
+    let range = getRadiusClass.length != 0 ? +getRadiusClass[0].attributes[1].value : 300
+
+
+    var coord = e.latlng;
+    var lat = coord.lat;
+    var lng = coord.lng;
+    const neLat = bounds._northEast.lat;
+    const neLon = bounds._northEast.lng;
+    const swLat = bounds._southWest.lat;
+    const swLon = bounds._southWest.lng;
+
+
+    // apparently the only way to get pixel level data is by putting it
+    // in a canvas.  that's nuts.
+    var latfrac = (neLat - lat) / (neLat - swLat);
+    var lngfrac = (neLon - lng) / (neLon - swLon);
+
+
+    var rendersize = 800;
+
+    var x = (1 - lngfrac) * rendersize;
+    var y = latfrac * rendersize;
+
+    var currentOverlayImg = overlay.getElement();
+
+    var canvas = document.createElement('canvas');
+    ctx = canvas.getContext('2d');
+    const width = 800;
+    const height = 800;
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx.drawImage(currentOverlayImg, 0, 0, 800, 800);
+    var pixelData = ctx.getImageData(x, y, 1, 1).data;
+    let clickColor = pixelData.slice(0, -1);
+    let allColors = getColor();
+    let colorIndex = allColors.findIndex(element => element.every(e => clickColor.includes(e)));
+    let price = getPrice()[colorIndex];
+
+    console.log(pixelData);
+    //Получем информацию об объявляениях
+    let [htmlGetPriceFromRange, buildingsDots] = await getPriceFromRange(+lat.toFixed(6), +lng.toFixed(6), range, price);
+
+
+    drawCircleMarkets(buildingsDots);
+
+    if (pixelData[3] === 255) {
+
+        if (circle != undefined) {
+            map.removeLayer(circle)
+        }
+        circle = L.circle([lat, lng], range).addTo(map);
+        var popup = L.popup({minWidth: 350, maxHeight: 300})
+            .setLatLng(coord)
+            .setContent(htmlGetPriceFromRange)
+            //.setContent(`Ср. цена - ${price}` htmlGetPriceFromRange)
+            .openOn(map);
+    }
+
+});
+
+
+var layerGroup = L.layerGroup();
+
+function drawCircleMarkets(dots) {
+    if (map.hasLayer(layerGroup)) {
+        layerGroup.clearLayers();
+    }
+
+    for (let i = 0; i < dots.length; i++) {
+        var marker = L.circleMarker(dots[i], {
+            color: '#ebebeb',
+            fillColor: '#000',
+            stroke: true,
+            radius: 5,
+            fillOpacity: 1,
+            interactive: false,
+            className: "circle",
+        });
+        layerGroup.addLayer(marker);
+        map.addLayer(layerGroup);
+    }
+}
+
+
+
+
+</script>
+
+</body>
