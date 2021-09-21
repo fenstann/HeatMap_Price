@@ -22,6 +22,7 @@
 **
 https://www.youtube.com/watch?v=6OeQWtSW10c
 ![](https://i.imgur.com/glGa3wP.png)
+![](https://i.imgur.com/oD7Hs90.png)
 Сама тепловая карта, при нажатии на карту появляется окошко с данными о средней цене в этом радиусе и количестве квартир.
 
 
